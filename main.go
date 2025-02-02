@@ -11,24 +11,24 @@ import (
 func main() {
 	start := time.Now()
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 100)    // 限制最大并发数量为 100
-	var openPorts atomic.Value         // 用 atomic 包存储并发安全的端口列表
-	openPorts.Store(make([]string, 0)) // 初始化为一个空切片
+	sem := make(chan struct{}, 100)    // Limit the maximum concurrency to 100
+	var openPorts atomic.Value         // Use the atomic package to store a thread-safe list of open ports
+	openPorts.Store(make([]string, 0)) // Initialize as an empty slice
 
 	for i := 0; i < 65535; i++ {
 		wg.Add(1)
 		sem <- struct{}{}
 		go func(j int) {
 			defer wg.Done()
-			defer func() { <-sem }()
+			defer func() { <-sem }() // Release the semaphore after the goroutine finishes
 
 			address := fmt.Sprintf("192.168.1.88:%d", j)
 			conn, err := net.Dial("tcp", address)
 			if err != nil {
-				return // 端口关闭，忽略
+				return // Port is closed, ignore it
 			}
 			conn.Close()
-			// 使用原子操作确保并发安全
+			// Use atomic operations to ensure thread safety
 			ports := openPorts.Load().([]string)
 			ports = append(ports, address)
 			openPorts.Store(ports)
@@ -37,7 +37,7 @@ func main() {
 	wg.Wait()
 
 	elapsed := time.Since(start) / 1e9
-	// 最后统一打印开放的端口
+	// Print the open ports at the end
 	fmt.Printf("Open ports:\n")
 	for _, port := range openPorts.Load().([]string) {
 		fmt.Println(port)
