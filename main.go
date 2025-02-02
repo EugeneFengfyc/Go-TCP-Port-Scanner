@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"sync"
@@ -9,10 +10,20 @@ import (
 )
 
 func main() {
+	// Define a flag for the IP address
+	ip := flag.String("ip", "", "IP address to scan (e.g., 192.134.1.88)")
+	flag.Parse()
+
+	// Check if IP address is provided
+	if *ip == "" {
+		fmt.Println("Please provide an IP address using the -ip flag.")
+		return
+	}
+
 	start := time.Now()
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, 100)    // Limit the maximum concurrency to 100
-	var openPorts atomic.Value         // Use the atomic package to store a thread-safe list of open ports
+	var openPorts atomic.Value         // Use atomic package to store a thread-safe list of open ports
 	openPorts.Store(make([]string, 0)) // Initialize as an empty slice
 
 	for i := 0; i < 65535; i++ {
@@ -22,7 +33,7 @@ func main() {
 			defer wg.Done()
 			defer func() { <-sem }() // Release the semaphore after the goroutine finishes
 
-			address := fmt.Sprintf("192.168.1.88:%d", j)
+			address := fmt.Sprintf("%s:%d", *ip, j)
 			conn, err := net.Dial("tcp", address)
 			if err != nil {
 				return // Port is closed, ignore it
